@@ -1,0 +1,9 @@
+---
+"extends":
+- "defaults/configurations/airbnb/es6"
+
+"env":
+  "es6": true
+
+"rules":
+  "comma-dangle": ["error", "never"]
