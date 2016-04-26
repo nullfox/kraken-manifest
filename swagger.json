@@ -1,0 +1,221 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "OpenDNS API",
+        "description": "Because APIs are life",
+        "version": "0.0.1"
+    },
+    "host": "localhost",
+    "schemes": [
+        "http"
+    ],
+    "basePath": "/",
+    "produces": [
+        "application/json"
+    ],
+    "paths": {
+        "/projects/{projectId}/manifests": {
+            "x-kraken-collection": "Manifest",
+            "get": {
+                "description": "Return a list of Manifest",
+                "operationId": "list",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "path",
+                        "type": "integer",
+                        "description": "The project id related to this Manifest",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return a list of Manifest",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ManifestResponse"
+                            }
+                        }
+                    }
+                },
+                "x-amazon-apigateway-integration": {
+                    "type": "http",
+                    "uri": "http://api-lb.krakenidentities.qq.p1.usw1.opendns.com/projects/{projectId}/manifests",
+                    "httpMethod": "get",
+                    "requestParameters": {
+                        "integration.request.path.projectId": "method.request.path.projectId"
+                    },
+                    "requestTemplates": {
+                        "application/json": "{\"resourcePath\":\"$context.resourcePath\",\"httpMethod\":\"$context.httpMethod\",\"queryParams\":{\"filters\":\"$util.base64Encode($input.params().querystring.filters)\"}}"
+                    },
+                    "responses": {
+                        "2\\d{2}": {
+                            "statusCode": 200,
+                            "responseTemplates": null
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/manifests/{id}": {
+            "x-kraken-collection": "Manifest",
+            "get": {
+                "description": "Return a Manifest",
+                "operationId": "read",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "path",
+                        "type": "integer",
+                        "description": "The project id related to this Manifest",
+                        "required": true
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "type": "integer",
+                        "description": "The id related to this Manifest",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return a Manifest",
+                        "schema": {
+                            "$ref": "#/definitions/ManifestResponse"
+                        }
+                    }
+                },
+                "x-amazon-apigateway-integration": {
+                    "type": "http",
+                    "uri": "http://api-lb.krakenidentities.qq.p1.usw1.opendns.com/projects/{projectId}/manifests/{id}",
+                    "httpMethod": "get",
+                    "requestParameters": {
+                        "integration.request.path.projectId": "method.request.path.projectId",
+                        "integration.request.path.id": "method.request.path.id"
+                    },
+                    "requestTemplates": {
+                        "application/json": "{\"resourcePath\":\"$context.resourcePath\",\"httpMethod\":\"$context.httpMethod\",\"queryParams\":{\"filters\":\"$util.base64Encode($input.params().querystring.filters)\"}}"
+                    },
+                    "responses": {
+                        "2\\d{2}": {
+                            "statusCode": 200,
+                            "responseTemplates": null
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a Manifest",
+                "operationId": "update",
+                "parameters": [
+                    {
+                        "name": "projectId",
+                        "in": "path",
+                        "type": "integer",
+                        "description": "The project id related to this Manifest",
+                        "required": true
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "type": "integer",
+                        "description": "The id related to this Manifest",
+                        "required": true
+                    },
+                    {
+                        "name": "payload",
+                        "in": "body",
+                        "description": "The new Manifest you want to create",
+                        "schema": {
+                            "$ref": "#/definitions/ManifestModify"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Update a Manifest",
+                        "schema": {
+                            "$ref": "#/definitions/ManifestResponse"
+                        }
+                    }
+                },
+                "x-amazon-apigateway-integration": {
+                    "type": "http",
+                    "uri": "http://api-lb.krakenidentities.qq.p1.usw1.opendns.com/projects/{projectId}/manifests/{id}",
+                    "httpMethod": "put",
+                    "requestParameters": {
+                        "integration.request.path.projectId": "method.request.path.projectId",
+                        "integration.request.path.id": "method.request.path.id"
+                    },
+                    "requestTemplates": {
+                        "application/json": "{\"resourcePath\":\"$context.resourcePath\",\"httpMethod\":\"$context.httpMethod\",\"queryParams\":{\"filters\":\"$util.base64Encode($input.params().querystring.filters)\"}}"
+                    },
+                    "responses": {
+                        "2\\d{2}": {
+                            "statusCode": 200,
+                            "responseTemplates": null
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "ManifestResponse": {
+            "type": "object",
+            "required": [
+                "id",
+                "projectId",
+                "version",
+                "url",
+                "latest"
+            ],
+            "properties": {
+                "id": {
+                    "type": "number",
+                    "description": "The id of the Manifest"
+                },
+                "projectId": {
+                    "type": "number",
+                    "description": "The project id of the Manifest"
+                },
+                "version": {
+                    "type": "number",
+                    "description": "The version of the Manifest"
+                },
+                "url": {
+                    "type": "string",
+                    "description": "The url of the Manifest"
+                },
+                "latest": {
+                    "type": "boolean",
+                    "description": "The latest of the Manifest"
+                }
+            }
+        },
+        "ManifestModify": {
+            "type": "object",
+            "required": [
+                "id",
+                "version",
+                "manifest"
+            ],
+            "properties": {
+                "id": {
+                    "type": "number",
+                    "description": "The id of the Manifest"
+                },
+                "version": {
+                    "type": "number",
+                    "description": "The version of the Manifest"
+                },
+                "manifest": {
+                    "type": "object",
+                    "description": "The manifest of the Manifest"
+                }
+            }
+        }
+    }
+}

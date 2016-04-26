@@ -1,7 +1,7 @@
 title: Registry
 version: 0.0.1
 description: I'm an API
-baseUri: localhost
+baseUri: api-lb.krakenidentities.qq.p1.usw1.opendns.com
 schemes:
     - http
 formats:

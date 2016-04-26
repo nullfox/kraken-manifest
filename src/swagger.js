@@ -1,5 +1,6 @@
 import FS from 'fs';
 import Path from 'path';
+import URL from 'url';
 import Util from 'Util';
 import _ from 'lodash';
 import Faker from 'faker';
@@ -61,10 +62,15 @@ const methods = {
 };
 
 class Model {
-  constructor(name, attributes, options) {
+  constructor(swagger, name, attributes, options) {
+    this._swagger = swagger;
     this._name = name;
     this._attributes = attributes;
-    this._options = options;
+    this._options = options || {};
+  }
+
+  get swagger() {
+    return this._swagger;
   }
 
   get name() {
@@ -94,6 +100,10 @@ class Model {
 
   get includeValidators() {
     return _.get(this.options, 'validators', true);
+  }
+
+  get includeApiGateway() {
+    return _.get(this.options, 'apiGateway', false);
   }
 
   get definitions() {
@@ -167,11 +177,7 @@ class Model {
       return match.split(':');
     }));
 
-    return {
-      path: path,
-      untypedPath: untypedPath,
-      params: params,
-    };
+    return { path, untypedPath, params };
   }
 
   generateDefinition(properties) {
@@ -186,7 +192,7 @@ class Model {
       .map((attributes, property) => {
         const dataType = this.dataTypeForType(attributes.type);
 
-        let prop = {
+        const prop = {
           type: dataType.type,
           description: _.get(
             attributes,
@@ -240,30 +246,69 @@ class Model {
       };
     }
 
-    const description = Util.format.call(null, attributes.description, Inflected.titleize(this.name));
+    const description = Util.format.call(
+      null,
+      attributes.description,
+      Inflected.titleize(this.name)
+    );
 
-    return {
+    const path = {
       description: description,
       operationId: method,
       parameters: this.generatePathParameters(attributes),
       responses: {
-        '200': {
-          description: description,
-          schema: schema
-        }
+        200: { description, schema }
       }
     };
+
+    if (this.includeApiGateway) {
+      const basePath = this.swagger.manifest.basePath.replace(/^\/?([^\/]*)\/?$/, '$1');
+      const parsedPath = this.parsedPathForMethod(attributes);
+      const pathName = _.isEmpty(basePath) ? parsedPath.untypedPath : [basePath, parsedPath.untypedPath].join('/');
+
+      path['x-amazon-apigateway-integration'] = {
+        type: 'http',
+        uri: URL.format({
+          protocol: this.swagger.manifest.schemes[0],
+          host: this.swagger.kraken.baseUri,
+          pathname: pathName
+        }),
+        httpMethod: attributes.method,
+        requestParameters: _.fromPairs(_.map(
+          parsedPath.params,
+          (type, name) => {
+            const source = Util.format('method.request.path.%s', name);
+            const dest = Util.format('integration.request.path.%s', name);
+
+            return [dest, source];
+          }
+        )),
+        requestTemplates: this.generateRequestVtl(attributes),
+        responses: {
+          '2\\d{2}': {
+            statusCode: 200,
+            responseTemplates: this.generateResponseVtl(attributes)
+          }
+        }
+      };
+    }
+
+    return path;
   }
 
   generatePathParameters(method) {
     const path = this.parsedPathForMethod(method);
 
-    let params = _.map(path.params, (type, key) => {
+    const params = _.map(path.params, (type, key) => {
       return {
         name: key,
         in: 'path',
         type: type,
-        description: Util.format('The %s related to this %s', Inflected.underscore(key).replace(/_/g, ' '), Inflected.titleize(this.name)),
+        description: Util.format(
+          'The %s related to this %s',
+          Inflected.underscore(key).replace(/_/g, ' '),
+          Inflected.titleize(this.name)
+        ),
         required: true
       };
     });
@@ -274,12 +319,30 @@ class Model {
         in: 'body',
         description: Util.format('The new %s you want to create', Inflected.titleize(this.name)),
         schema: {
-          '$ref': Util.format('#/definitions/%sModify', Inflected.camelize(this.name))
+          $ref: Util.format('#/definitions/%sModify', Inflected.camelize(this.name))
         }
       });
     }
 
     return params;
+  }
+
+  generateRequestVtl() {
+    return {
+      'application/json': JSON.stringify({
+        resourcePath: '$context.resourcePath',
+        httpMethod: '$context.httpMethod',
+        queryParams: {
+          filters: '$util.base64Encode($input.params().querystring.filters)'
+        }
+      })
+    };
+  }
+
+  generateResponseVtl() {
+    return {
+      'application/json': '#set ($root=$input.path("$")) { "id": $root.id }'
+    };
   }
 }
 
@@ -303,7 +366,7 @@ export default class Swagger {
 
   generate(options) {
     _.forEach(this.kraken.models, (def, name) => {
-      let model = new Model(name, def);
+      const model = new Model(this, name, def, options);
 
       this.manifest.definitions = _.merge(this.manifest.definitions, model.definitions);
       this.manifest.paths = _.merge(this.manifest.paths, model.paths);
@@ -313,10 +376,26 @@ export default class Swagger {
   }
 
   generateAndWrite(outputPath, options) {
-    let output = this.generate();
+    const output = this.generate(options);
 
-    FS.writeFileSync(outputPath, YAML.stringify(output, 24, 2));
+    const ext = Path.extname(outputPath);
+
+    switch (ext) {
+      case '.json':
+        FS.writeFileSync(outputPath, JSON.stringify(output, null, 4));
+        break;
+
+      case '.yaml':
+        FS.writeFileSync(outputPath, YAML.stringify(output, 24, 2));
+        break;
+
+      default:
+        throw new RangeError('Output path must be suffixed with either .json or .yaml');
+    }
   }
 }
 
 Swagger.Model = Model;
+
+Swagger.DataTypes = dataTypes;
+Swagger.Methods = methods;
