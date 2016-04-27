@@ -6,7 +6,7 @@
     "build": "babel src -d lib && babel src/kraken-swaggerize -o lib/kraken-swaggerize",
     "lint": "eslint src/ test/*.test.js",
     "test": "mocha --compilers js:babel-register",
-    "preinstall": "npm run build"
+    "postinstall": "npm run build"
   },
   "bin": {
     "kraken-swaggerize": "./lib/kraken-swaggerize"
