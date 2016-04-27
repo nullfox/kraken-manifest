@@ -286,8 +286,7 @@ class Model {
         requestTemplates: this.generateRequestVtl(attributes),
         responses: {
           '2\\d{2}': {
-            statusCode: 200,
-            responseTemplates: this.generateResponseVtl(attributes)
+            statusCode: 200
           }
         }
       };
