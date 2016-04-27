@@ -1,6 +1,6 @@
 {
   "name": "kraken-manifest",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "scripts": {
     "build": "babel src -d lib && babel src/kraken-swaggerize -o lib/kraken-swaggerize",
