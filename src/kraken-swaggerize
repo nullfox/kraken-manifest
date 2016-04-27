@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
+import minimist from 'minimist';
 import Swagger from './swagger';
 
+const argv = minimist(process.argv.slice(4));
+
 const swagger = new Swagger(process.argv[2]);
-swagger.generateAndWrite(process.argv[3], {
-  examples: false,
-  validators: false,
-  apiGateway: true
-});
+swagger.generateAndWrite(process.argv[3], argv);
