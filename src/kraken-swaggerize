@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+
+import Swagger from './swagger';
+
+const swagger = new Swagger(process.argv[2]);
+swagger.generateAndWrite(process.argv[3], {
+  examples: false,
+  validators: false,
+  apiGateway: true
+});

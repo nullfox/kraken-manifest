@@ -6,6 +6,8 @@ schemes:
     - http
 formats:
     - application/json
+quadra:
+  project: krakenidentities
 models:
   manifest:
     path: /projects/{projectId:integer}/manifests/{id:integer}

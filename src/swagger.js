@@ -121,7 +121,7 @@ class Model {
   }
 
   get paths() {
-    let paths = {};
+    const paths = {};
 
     // Setup the collection & resource hashes for good time-y action
     let path = this.parsedPathForMethod({ collection: true }).untypedPath;
@@ -135,9 +135,9 @@ class Model {
     };
 
     _.forEach(_.pick(methods, this.methods), (method, operation) => {
-      let path = this.parsedPathForMethod(method).untypedPath;
+      const parsedPath = this.parsedPathForMethod(method).untypedPath;
 
-      paths[path][method.method] = this.generatePath(operation, method);
+      paths[parsedPath][method.method] = this.generatePath(operation, method);
     });
 
     return paths;

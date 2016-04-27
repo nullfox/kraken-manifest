@@ -2,11 +2,14 @@
   "name": "kraken-manifest",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "build": "babel src -d lib",
+    "build": "babel src -d lib && babel src/kraken-swaggerize -o lib/kraken-swaggerize",
     "lint": "eslint src/ test/*.test.js",
-    "test": "mocha --compilers js:babel-register"
+    "test": "mocha --compilers js:babel-register",
+    "postinstall": "npm run build"
+  },
+  "bin": {
+    "kraken-swaggerize": "./lib/kraken-swaggerize"
   },
   "author": "",
   "license": "ISC",
