@@ -7,6 +7,15 @@ import Faker from 'faker';
 import YAML from 'yamljs';
 import Inflected from 'inflected';
 
+const infoKeys = [
+  'info.title',
+  'info.description',
+  'info.version',
+  'formats',
+  'baseUri',
+  'schemes'
+];
+
 const dataTypes = {
   string: {
     type: 'string',
@@ -107,14 +116,16 @@ class Model {
   }
 
   get definitions() {
-    let defs = {};
+    const defs = {};
 
     // Write out response def regardless
-    defs[Util.format('%sResponse', Inflected.capitalize(this.name))] = this.generateDefinition(this.attributes.response);
+    let defKey = Util.format('%sResponse', Inflected.capitalize(this.name));
+    defs[defKey] = this.generateDefinition(this.attributes.response);
 
     // Only write out modify def if we have modify endpoints for this resource
     if (!this.isReadOnly) {
-      defs[Util.format('%sModify', Inflected.capitalize(this.name))] = this.generateDefinition(this.attributes.modify);
+      defKey = Util.format('%sModify', Inflected.capitalize(this.name));
+      defs[defKey] = this.generateDefinition(this.attributes.modify);
     }
 
     return defs;
@@ -145,7 +156,7 @@ class Model {
 
   dataTypeForType(type) {
     const defaultType = {
-      type: type,
+      type,
       validator: false,
       example: Util.format('random.%s', type)
     };
@@ -181,7 +192,6 @@ class Model {
   }
 
   generateDefinition(properties) {
-
     // Pick out required fields
     const required = Object.keys(
       _.pickBy(properties, { required: true })
@@ -225,15 +235,15 @@ class Model {
       .value();
 
     return {
+      required,
       type: 'object',
-      required: required,
       properties: props
     };
   }
 
   generatePath(method, attributes) {
     let schema = {
-      '$ref': Util.format('#/definitions/%sResponse', Inflected.camelize(this.name))
+      $ref: Util.format('#/definitions/%sResponse', Inflected.camelize(this.name))
     };
 
     // If we're returning multiple items, schema shall be an array
@@ -241,7 +251,7 @@ class Model {
       schema = {
         type: 'array',
         items: {
-          '$ref': Util.format('#/definitions/%sResponse', Inflected.camelize(this.name))
+          $ref: Util.format('#/definitions/%sResponse', Inflected.camelize(this.name))
         }
       };
     }
@@ -253,7 +263,7 @@ class Model {
     );
 
     const path = {
-      description: description,
+      description,
       operationId: method,
       parameters: this.generatePathParameters(attributes),
       responses: {
@@ -264,7 +274,9 @@ class Model {
     if (this.includeApiGateway) {
       const basePath = this.swagger.manifest.basePath.replace(/^\/?([^\/]*)\/?$/, '$1');
       const parsedPath = this.parsedPathForMethod(attributes);
-      const pathName = _.isEmpty(basePath) ? parsedPath.untypedPath : [basePath, parsedPath.untypedPath].join('/');
+      const pathName = _.isEmpty(basePath) ?
+        parsedPath.untypedPath :
+        [basePath, parsedPath.untypedPath].join('/');
 
       path['x-amazon-apigateway-integration'] = {
         type: 'http',
@@ -299,24 +311,30 @@ class Model {
     const path = this.parsedPathForMethod(method);
 
     const params = _.map(path.params, (type, key) => {
+      const description = Util.format(
+        'The %s related to this %s',
+        Inflected.underscore(key).replace(/_/g, ' '),
+        Inflected.titleize(this.name)
+      );
+
       return {
+        type,
+        description,
         name: key,
         in: 'path',
-        type: type,
-        description: Util.format(
-          'The %s related to this %s',
-          Inflected.underscore(key).replace(/_/g, ' '),
-          Inflected.titleize(this.name)
-        ),
         required: true
       };
     });
 
     if (method.modify) {
+      const description = Util.format(
+        'The new %s you want to create', Inflected.titleize(this.name)
+      );
+
       params.push({
+        description,
         name: 'payload',
         in: 'body',
-        description: Util.format('The new %s you want to create', Inflected.titleize(this.name)),
         schema: {
           $ref: Util.format('#/definitions/%sModify', Inflected.camelize(this.name))
         }
@@ -353,6 +371,14 @@ export default class Swagger {
 
     this._kraken = krakenOrPath;
     this._manifest = YAML.load(Path.join(__dirname, '../templates/swagger.yaml'));
+
+    this.setupInfoProperties();
+
+    infoKeys.forEach((key) => {
+      key = key.split('.').pop();
+
+      this[key] = this.kraken[key];
+    });
   }
 
   get kraken() {
@@ -361,6 +387,21 @@ export default class Swagger {
 
   get manifest() {
     return this._manifest;
+  }
+
+  set formats(formats) {
+    this.manifest.consumes = this.manifest.produces = [].concat(formats);
+  }
+
+  set baseUri(uri) {
+    const parsed = URL.parse(Util.format(
+      '%s://%s',
+      this.manifest.schemes[0],
+      uri
+    ));
+
+    this.manifest.host = parsed.hostname;
+    this.manifest.basePath = parsed.pathname;
   }
 
   generate(options) {
@@ -391,6 +432,23 @@ export default class Swagger {
       default:
         throw new RangeError('Output path must be suffixed with either .json or .yaml');
     }
+  }
+
+  setupInfoProperties() {
+    infoKeys.forEach((key) => {
+      if ([
+        'baseUri',
+        'formats'
+      ].indexOf(key) !== -1) {
+        return;
+      }
+
+      Object.defineProperty(this, key.split('.').pop(), {
+        set: (val) => {
+          _.set(this.manifest, key, val);
+        }
+      });
+    });
   }
 }
 
