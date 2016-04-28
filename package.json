@@ -1,5 +1,5 @@
 {
-  "name": "kraken-manifest",
+  "name": "@nullfox/kraken-manifest",
   "version": "0.0.2",
   "description": "",
   "scripts": {
