@@ -192,13 +192,15 @@ class Model {
   }
 
   generateDefinition(properties) {
+    const parsedProperties = this.generateParsedProperties(properties);
+
     // Pick out required fields
     const required = Object.keys(
-      _.pickBy(properties, { required: true })
+      _.pickBy(parsedProperties, { required: true })
     );
 
     // Generate a hash of properties
-    const props = _.chain(properties)
+    const props = _.chain(parsedProperties)
       .map((attributes, property) => {
         const dataType = this.dataTypeForType(attributes.type);
 
@@ -342,6 +344,36 @@ class Model {
     }
 
     return params;
+  }
+
+  generateParsedProperties(properties) {
+    const propertyTemplate = {
+      required: true,
+      example: false,
+      validator: false
+    };
+
+    return _.chain(properties)
+    .map((property, field) => {
+      if (_.isString(property)) {
+        const type = property;
+
+        property = _.merge(_.cloneDeep(propertyTemplate), {
+          type: type
+        });
+      } else {
+        property = _.merge(_.cloneDeep(propertyTemplate), property);
+      }
+
+      if (_.endsWith(field, '?')) {
+        property.required = false;
+        field = _.trimEnd(field, '?');
+      }
+
+      return [field, property];
+    })
+    .fromPairs()
+    .value();
   }
 
   generateRequestVtl() {
