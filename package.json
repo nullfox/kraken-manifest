@@ -1,6 +1,6 @@
 {
   "name": "@nullfox/kraken-manifest",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "scripts": {
     "build": "babel src -d lib && babel src/kraken-swaggerize -o lib/kraken-swaggerize",

@@ -115,6 +115,10 @@ class Model {
     return _.get(this.options, 'apiGateway', false);
   }
 
+  get useBracketedQueries() {
+    return _.get(this.options, 'bracketedQueries', false);
+  }
+
   get definitions() {
     const defs = {};
 
@@ -312,7 +316,7 @@ class Model {
   generatePathParameters(method) {
     const path = this.parsedPathForMethod(method);
 
-    const params = _.map(path.params, (type, key) => {
+    let params = _.map(path.params, (type, key) => {
       const description = Util.format(
         'The %s related to this %s',
         Inflected.underscore(key).replace(/_/g, ' '),
@@ -327,6 +331,24 @@ class Model {
         required: true
       };
     });
+
+    if (!this.useBracketedQueries && method.collection === true) {
+      const responseAttributes = _.omitBy(
+        this.generateParsedProperties(this.attributes.response),
+        { type: 'object' }
+      );
+
+      params = params.concat(
+        _.map(responseAttributes, (attributes, key) => {
+          return {
+            type: attributes.type,
+            name: key,
+            in: 'query',
+            required: false
+          };
+        })
+      );
+    }
 
     if (method.modify) {
       const description = Util.format(
